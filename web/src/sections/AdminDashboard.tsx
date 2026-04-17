@@ -35,7 +35,7 @@ import {
   Sun,
 } from 'lucide-react';
 
-interface AdminDashboardProps {
+interface MunicipalAgentDashboardProps {
   user: User;
   onLogout: () => void;
   isDark: boolean;
@@ -58,10 +58,10 @@ interface AdminDashboardProps {
 
 const SERVICES = [
   { id: 'civil', name: 'Civil Status', nameFr: 'État Civil', color: 'bg-blue-500' },
-  { id: 'autorisation', name: 'autorisation de voirie', nameFr: 'L autorisation de voirie', color: 'bg-green-500' },
+  { id: 'autorisation', name: ' Right-of-way permit', nameFr: 'autorisation de voirie', color: 'bg-green-500' },
 ];
 
-export function AdminDashboard({ user, onLogout, employees, tasks, isDark, toggleDarkMode }: AdminDashboardProps) {
+export function MunicipalAgentDashboard({ user, onLogout, employees, tasks, isDark, toggleDarkMode }: MunicipalAgentDashboardProps) {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
@@ -71,21 +71,21 @@ export function AdminDashboard({ user, onLogout, employees, tasks, isDark, toggl
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const { t, language } = useLanguage();
 
-  const totalEmployees = employees.employees.filter((e) => e.role !== 'admin').length;
-  const activeEmployees = employees.employees.filter((e) => e.role !== 'admin' && e.status === 'active').length;
+  const totalEmployees = employees.employees.filter((e) => e.role !== 'Municipal_Agent').length;
+  const activeEmployees = employees.employees.filter((e) => e.role !== 'Municipal_Agent' && e.status === 'active').length;
   const totalTasks = tasks.tasks.length;
   const completedTasks = tasks.tasks.filter((t) => t.status === 'completed').length;
 
   const filteredEmployees = employees.employees.filter(
     (emp) =>
-      emp.role !== 'admin' &&
+      emp.role !== 'Municipal_Agent' &&
       (emp.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (emp.service && emp.service.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
-  const allRealEmployees = employees.employees.filter((e) => e.role !== 'admin');
+  const allRealEmployees = employees.employees.filter((e) => e.role !== 'Municipal_Agent');
 
   const employeesByService = SERVICES.map((service) => ({
     ...service,
@@ -102,7 +102,7 @@ export function AdminDashboard({ user, onLogout, employees, tasks, isDark, toggl
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const service = newEmployeeService || (formData.get('service') as string) || 'État civil';
-    const position = newEmployeePosition || (formData.get('poste') as string) || 'Carte de séjour (ou permis de séjour)';
+    const position = newEmployeePosition || (formData.get('poste') as string) || 'Fiche de résidence';
     const newEmployee = {
       email: formData.get('email') as string,
       password: 'employee123',
@@ -118,7 +118,7 @@ export function AdminDashboard({ user, onLogout, employees, tasks, isDark, toggl
     employees.addEmployee(newEmployee);
     setIsAddEmployeeOpen(false);
     setNewEmployeeService('État civil');
-    setNewEmployeePosition('Carte de séjour (ou permis de séjour)');
+    setNewEmployeePosition('Fiche de résidence');
     toast.success(language === 'fr' ? 'Employé ajouté avec succès' : 'Employee added successfully');
   };
 
@@ -212,7 +212,7 @@ export function AdminDashboard({ user, onLogout, employees, tasks, isDark, toggl
             <div>
               <h2 className="font-bold text-slate-900 dark:text-white">BALADIYA DIGITAL</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {language === 'fr' ? "Panneau d'administration" : 'Admin Panel'}
+                {language === 'fr' ? "Panneau Agent Municipal" : 'Municipal Agent Panel'}
               </p>
             </div>
           </div>
@@ -370,8 +370,6 @@ export function AdminDashboard({ user, onLogout, employees, tasks, isDark, toggl
                   ))}
                 </div>
               </div>
-
-
             </div>
           )}
 
@@ -428,7 +426,7 @@ export function AdminDashboard({ user, onLogout, employees, tasks, isDark, toggl
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="État civil">État civil</SelectItem>
-                            <SelectItem value="Urbanisme & Construction">Urbanisme & Construction</SelectItem>
+                            <SelectItem value="Autorisation de voirie">Autorisation de voirie</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -439,9 +437,9 @@ export function AdminDashboard({ user, onLogout, employees, tasks, isDark, toggl
                             <SelectValue placeholder={language === 'fr' ? 'Sélectionner un poste' : 'Select a position'} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Carte de séjour (ou permis de séjour)">Carte de séjour</SelectItem>
-                            <SelectItem value="Certificat de résidence">Certificat de résidence</SelectItem>
                             <SelectItem value="Acte de naissance">Acte de naissance</SelectItem>
+                            <SelectItem value="Fiche de résidence">Fiche de résidence</SelectItem>
+                            <SelectItem value="Certificat de résidence">Certificat de résidence</SelectItem>
                             <SelectItem value="Certificat de mariage">Certificat de mariage</SelectItem>
                           </SelectContent>
                         </Select>
@@ -623,7 +621,7 @@ export function AdminDashboard({ user, onLogout, employees, tasks, isDark, toggl
               <Card className="dark:bg-slate-800 dark:border-slate-700">
                 <CardHeader>
                   <CardTitle className="dark:text-white">
-                    {language === 'fr' ? 'Paramètres administrateur' : 'Admin Settings'}
+                    {language === 'fr' ? 'Paramètres Agent Municipal' : 'Municipal Agent Settings'}
                   </CardTitle>
                   <CardDescription>
                     {language === 'fr' ? 'Gérer les paramètres de votre compte' : 'Manage your account settings'}

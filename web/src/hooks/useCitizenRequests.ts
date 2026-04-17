@@ -10,7 +10,6 @@ const CITIZENS: Citizen[] = [
     nin: '1234567890123000478',
     email: 'ahmed.Fassi@email.com',
     phone: '0555123456',
-    
   },
   {
     id: 'c2',
@@ -19,7 +18,6 @@ const CITIZENS: Citizen[] = [
     nin: '9876543210987',
     email: 'samira.trabelsi@email.com',
     phone: '0555987654',
-   
   },
   {
     id: 'c3',
@@ -32,24 +30,23 @@ const CITIZENS: Citizen[] = [
     commune: 'Bir El Djir',
     actYear: '1998',
     actNumber: '45821',
-  }
+  },
 ];
 
-// Sample requests - LINKED to employees by their ID
+// Sample requests — LINKED to employees by POSITION
 const REQUESTS_INITIALES: CitizenRequest[] = [
   {
     id: 'req-1',
     citizenId: 'c1',
     citizen: CITIZENS[0],
     type: 'document',
-    subject: 'Carte de séjour',
+    subject: 'Fiche de résidence',
     description: 'Demande de renouvellement',
     status: 'pending',
-    assignedTo: '3', // Jamel — Carte de séjour
+    assignedPosition: 'Fiche de résidence',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
-  
   {
     id: 'req-3',
     citizenId: 'c3',
@@ -58,7 +55,7 @@ const REQUESTS_INITIALES: CitizenRequest[] = [
     subject: 'Acte de naissance',
     description: 'Demande de copie',
     status: 'pending',
-    assignedTo: '2', // Sarah — Acte de naissance
+    assignedPosition: 'Acte de naissance',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -70,14 +67,16 @@ const REQUESTS_INITIALES: CitizenRequest[] = [
     subject: 'Certificat de mariage',
     description: 'Demande de certificat',
     status: 'pending',
-    assignedTo: '5', // Lisa's ID
+    assignedPosition: 'Certificat de mariage',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 ];
 
-// Generate notifications from requests - LINKED to employees
-const generateNotificationsFromRequests = (requests: CitizenRequest[]): EmployeeNotification[] => {
+// Generate notifications from requests — LINKED by POSITION
+const generateNotificationsFromRequests = (
+  requests: CitizenRequest[]
+): EmployeeNotification[] => {
   return requests.map((req) => ({
     id: `notif-${req.id}`,
     type: 'new-request' as const,
@@ -93,7 +92,7 @@ const generateNotificationsFromRequests = (requests: CitizenRequest[]): Employee
     citizenLastName: req.citizen.lastName,
     actYear: req.citizen.actYear,
     actNumber: req.citizen.actNumber,
-    employeeId: req.assignedTo || '',
+    position: req.assignedPosition || '',
     read: false,
     createdAt: req.createdAt,
   }));
@@ -101,26 +100,28 @@ const generateNotificationsFromRequests = (requests: CitizenRequest[]): Employee
 
 export function useCitizenRequests() {
   const [requests, setRequests] = useState<CitizenRequest[]>(REQUESTS_INITIALES);
-  
-  // Generate notifications from requests
   const [notifications, setNotifications] = useState<EmployeeNotification[]>(
     generateNotificationsFromRequests(REQUESTS_INITIALES)
   );
 
-  // Get requests for specific employee
-  const getRequestsForEmployee = useCallback((employeeId: string) => {
-    return requests.filter((r) => r.assignedTo === employeeId);
-  }, [requests]);
+  // Get requests for a given POSITION
+  const getRequestsForPosition = useCallback(
+    (position: string) => requests.filter((r) => r.assignedPosition === position),
+    [requests]
+  );
 
-  // Get notifications for specific employee - KEY FUNCTION!
-  const getNotificationsForEmployee = useCallback((employeeId: string) => {
-    return notifications.filter((n) => n.employeeId === employeeId);
-  }, [notifications]);
+  // Get notifications for a given POSITION
+  const getNotificationsForPosition = useCallback(
+    (position: string) => notifications.filter((n) => n.position === position),
+    [notifications]
+  );
 
-  // Get unread count for specific employee
-  const getUnreadCountForEmployee = useCallback((employeeId: string) => {
-    return notifications.filter((n) => n.employeeId === employeeId && !n.read).length;
-  }, [notifications]);
+  // Get unread count for a given POSITION
+  const getUnreadCountForPosition = useCallback(
+    (position: string) =>
+      notifications.filter((n) => n.position === position && !n.read).length,
+    [notifications]
+  );
 
   const markNotificationAsRead = useCallback((notificationId: string) => {
     setNotifications((prev) =>
@@ -128,52 +129,54 @@ export function useCitizenRequests() {
     );
   }, []);
 
-  const markAllAsRead = useCallback((employeeId: string) => {
+  const markAllAsRead = useCallback((position: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.employeeId === employeeId ? { ...n, read: true } : n))
+      prev.map((n) => (n.position === position ? { ...n, read: true } : n))
     );
   }, []);
 
-  const addRequest = useCallback((request: Omit<CitizenRequest, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newRequest: CitizenRequest = {
-      ...request,
-      id: Math.random().toString(36).substr(2, 9),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setRequests((prev) => [...prev, newRequest]);
-    
-    // Create notification for assigned employee
-    const newNotification: EmployeeNotification = {
-      id: `notif-${newRequest.id}`,
-      type: 'new-request',
-      title: 'Nouvelle demande',
-      message: `${newRequest.citizen.firstName} ${newRequest.citizen.lastName} a soumis une demande de ${newRequest.subject}`,
-      requestId: newRequest.id,
-      citizenName: `${newRequest.citizen.firstName} ${newRequest.citizen.lastName}`,
-      citizenNin: newRequest.citizen.nin,
-      citizenEmail: newRequest.citizen.email,
-      wilaya: newRequest.citizen.wilaya,
-      commune: newRequest.citizen.commune,
-      citizenFirstName: newRequest.citizen.firstName,
-      citizenLastName: newRequest.citizen.lastName,
-      actYear: newRequest.citizen.actYear,
-      actNumber: newRequest.citizen.actNumber,
-      employeeId: newRequest.assignedTo || '',
-      read: false,
-      createdAt: newRequest.createdAt,
-    };
-    setNotifications((prev) => [newNotification, ...prev]);
-    
-    return newRequest;
-  }, []);
+  const addRequest = useCallback(
+    (request: Omit<CitizenRequest, 'id' | 'createdAt' | 'updatedAt'>) => {
+      const newRequest: CitizenRequest = {
+        ...request,
+        id: Math.random().toString(36).substr(2, 9),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setRequests((prev) => [...prev, newRequest]);
+
+      const newNotification: EmployeeNotification = {
+        id: `notif-${newRequest.id}`,
+        type: 'new-request',
+        title: 'Nouvelle demande',
+        message: `${newRequest.citizen.firstName} ${newRequest.citizen.lastName} a soumis une demande de ${newRequest.subject}`,
+        requestId: newRequest.id,
+        citizenName: `${newRequest.citizen.firstName} ${newRequest.citizen.lastName}`,
+        citizenNin: newRequest.citizen.nin,
+        citizenEmail: newRequest.citizen.email,
+        wilaya: newRequest.citizen.wilaya,
+        commune: newRequest.citizen.commune,
+        citizenFirstName: newRequest.citizen.firstName,
+        citizenLastName: newRequest.citizen.lastName,
+        actYear: newRequest.citizen.actYear,
+        actNumber: newRequest.citizen.actNumber,
+        position: newRequest.assignedPosition || '',
+        read: false,
+        createdAt: newRequest.createdAt,
+      };
+      setNotifications((prev) => [newNotification, ...prev]);
+
+      return newRequest;
+    },
+    []
+  );
 
   return {
     requests,
     notifications,
-    getRequestsForEmployee,
-    getNotificationsForEmployee,
-    getUnreadCountForEmployee,
+    getRequestsForPosition,
+    getNotificationsForPosition,
+    getUnreadCountForPosition,
     markNotificationAsRead,
     markAllAsRead,
     addRequest,

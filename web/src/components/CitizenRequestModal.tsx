@@ -57,7 +57,7 @@ interface CitizenRequestModalProps {
   requestId: string | null;
   isOpen: boolean;
   onClose: () => void;
-  employeeId: string;
+  position: string;
   onValidationComplete: () => void;
   language?: 'fr' | 'en';
 }
@@ -66,7 +66,7 @@ export function CitizenRequestModal({
   requestId, 
   isOpen, 
   onClose, 
-  employeeId,
+  position,
   onValidationComplete,
   language = 'fr',
 }: CitizenRequestModalProps) {
@@ -103,7 +103,12 @@ export function CitizenRequestModal({
     },
     missingDocsText: language === 'fr' ? 'Signaler Docs Manquants' : 'Report Missing Docs',
     missingDocsAlert: language === 'fr' ? 'Veuillez préciser quels documents manquent dans le commentaire.' : 'Please specify which documents are missing in the comment.',
-  };
+    birthActInfo: language === 'fr' ? 'Informations Acte de Naissance' : 'Birth Certificate Information',
+    wilaya: language === 'fr' ? 'Wilaya' : 'Wilaya',
+    commune: language === 'fr' ? 'Commune' : 'Commune',
+    actYear: language === 'fr' ? "Année de l'acte" : 'Act Year',
+    actNumber: language === 'fr' ? "N° de l'acte" : 'Act Number',
+    };
 
   useEffect(() => {
     if (requestId && isOpen) {
@@ -142,7 +147,7 @@ export function CitizenRequestModal({
             status,
             documentStatus: status === 'completed' ? 'valid' : status === 'in-progress' ? 'missing' : 'rejected',
             comment,
-            employeeId,
+            position,
           }),
         }
       );
@@ -152,14 +157,14 @@ export function CitizenRequestModal({
       if (response.ok) {
         toast.success(
           status === 'completed' 
-            ? '✅ Demande approuvée et email envoyé avec PDF!' 
+            ? ' Demande approuvée et email envoyé avec PDF!' 
             : status === 'in-progress'
-            ? '⚠️ Dossier marqué comme incomplet (documents manquant)!'
-            : '❌ Demande rejetée et notification envoyée!'
+            ? ' Dossier marqué comme incomplet (documents manquant)!'
+            : ' Demande rejetée et notification envoyée!'
         );
         
         if (data.emailSent) {
-          toast.info(`📧 Email envoyé à ${request.citizen.email}`);
+          toast.info(` Email envoyé à ${request.citizen.email}`);
         }
         
         onValidationComplete();

@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'employee';
+export type UserRole = 'Municipal_Agent' | 'employee';
 
 export interface User {
   id: string;
@@ -32,7 +32,7 @@ export interface Task {
     commune?: string;
     actYear?: string;
     actNumber?: string;
-    // Carte de séjour (Fatima)
+    // fiche de résidence(Fatima)
     cni?: string;
     cniFileUrl?: string;
     factureFileUrl?: string;

@@ -3,9 +3,6 @@ import type { ReactNode } from 'react';
 
 type Language = 'fr' | 'en';
 
-interface Translations {
-  [key: string]: string | Translations;
-}
 
 const translations = {
   fr: {
@@ -183,8 +180,6 @@ const translations = {
     statistics: 'Statistics',
     addEmployee: 'Add Employee',
 
-    // ── Add new words here (en) ──
-    // newWord: 'New translation',
   }
 };
 

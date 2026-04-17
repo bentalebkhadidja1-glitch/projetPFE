@@ -20,7 +20,7 @@ interface Request {
   createdAt: string;
 }
 
-export function EmployeeRequestValidation({ employeeId }: { employeeId: string }) {
+export function EmployeeRequestValidation({ employeeId }: { position: string; employeeId: string }) {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
 

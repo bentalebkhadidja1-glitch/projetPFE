@@ -16,7 +16,7 @@ export interface CitizenRequest {
   subject: string;
   description: string;
   status: 'pending' | 'in-progress' | 'completed' | 'rejected';
-  assignedTo?: string; // Employee ID
+  position?: string;     // position  only 
   createdAt: string;
   updatedAt: string;
   notes?: string;

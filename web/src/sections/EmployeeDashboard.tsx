@@ -613,7 +613,7 @@ export function EmployeeDashboard({
         requestId={selectedRequestId}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        employeeId={user.id}
+        position={user.position }
         onValidationComplete={handleValidationComplete}
         language={language}
       />

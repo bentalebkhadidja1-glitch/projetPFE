@@ -9,7 +9,7 @@ export interface Citizen {
   commune?: string;
   actYear?: string;
   actNumber?: string;
-  // Carte de séjour (Fatima)
+  // fiche de résidence (Fatima)
   cni?: string;
   cniFileUrl?: string;
   factureFileUrl?: string;
@@ -25,13 +25,14 @@ export interface CitizenRequest {
   subject: string;
   description: string;
   status: 'pending' | 'in-progress' | 'completed' | 'rejected';
-  assignedTo?: string;
+  assignedPosition?: string;
   createdAt: string;
   updatedAt: string;
   notes?: string;
 }
 
 export interface EmployeeNotification {
+  
   id: string;
   type: 'new-request' | 'request-updated' | 'request-assigned';
   title: string;
@@ -47,13 +48,13 @@ export interface EmployeeNotification {
   citizenLastName?: string;
   actYear?: string;
   actNumber?: string;
-  // Carte de séjour (Fatima)
+  // fiche de résidence(Fatima)
   cni?: string;
   cniFileUrl?: string;
   factureFileUrl?: string;
   dateNaissance?: string;
   adresse?: string;
-  employeeId: string;
+  position?: string;
   read: boolean;
   createdAt: string;
 }

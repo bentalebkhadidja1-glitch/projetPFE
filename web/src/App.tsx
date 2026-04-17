@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { LoginPage } from '@/sections/LoginPage';
-import { AdminDashboard } from '@/sections/AdminDashboard';
+import { MunicipalAgentDashboard } from '@/sections/AdminDashboard';
 import { EmployeeDashboard } from '@/sections/EmployeeDashboard';
 import { useRealRequests } from '@/hooks/useRealRequests';
 import { useAdminData } from '@/hooks/useAdminData';
@@ -16,7 +16,7 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'admin' | 'employee';
+  role: 'Municipal_Agent' | 'employee';
   service: string;
   position: string;
   phone: string;
@@ -58,7 +58,7 @@ function App() {
       }
       
       // Try admin login
-      const adminResponse = await fetch(`${API_BASE_URL}/admin/login`, {
+      const adminResponse = await fetch(`${API_BASE_URL}/Municipal_Agent/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -71,7 +71,7 @@ function App() {
           email: data.user.email,
           firstName: data.user.firstName,
           lastName: data.user.lastName,
-          role: 'admin',
+          role: 'Municipal_Agent',
           service: data.user.service,
           position: data.user.position,
           phone: data.user.phone,
@@ -127,7 +127,7 @@ function App() {
     case 'admin':
       return (
         <>
-          <AdminDashboard
+          <MunicipalAgentDashboard
             user={user as any}
             onLogout={logout}
             employees={{ 

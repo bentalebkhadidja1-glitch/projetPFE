@@ -27,10 +27,7 @@ export function useAdminData() {
       setLoading(true);
       const response = await fetch(`${API_BASE_URL}/admin/employees`);
       const data = await response.json();
-      
-      if (response.ok) {
-        setEmployees(data.employees || []);
-      }
+      if (response.ok) setEmployees(data.employees || []);
     } catch (error) {
       toast.error('Erreur lors du chargement des employés');
     } finally {
@@ -41,13 +38,12 @@ export function useAdminData() {
   const fetchAllRequests = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/admin/all-requests`);
+      const response = await fetch(`${API_BASE_URL}/admin/all-requests`);
       const data = await response.json();
-      
-      if (response.ok) {
-        setRequests(data.requests || []);
-      }
-    }  finally {
+      if (response.ok) setRequests(data.requests || []);
+    } catch (error) {
+      toast.error('Erreur lors du chargement des demandes');
+    } finally {
       setLoading(false);
     }
   }, []);
@@ -56,10 +52,7 @@ export function useAdminData() {
     try {
       const response = await fetch(`${API_BASE_URL}/admin/stats`);
       const data = await response.json();
-      
-      if (response.ok) {
-        setStats(data);
-      }
+      if (response.ok) setStats(data);
     } catch (error) {
       console.error('Erreur stats:', error);
     }

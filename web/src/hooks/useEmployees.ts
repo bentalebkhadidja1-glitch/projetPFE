@@ -55,6 +55,19 @@ const INITIAL_EMPLOYEES: User[] = [
     joinDate: '2022-07-20',
     status: 'active',
   },
+   {
+    id: '6',
+    email: 'karim@gmail.com',
+    password: 'employee123',
+    firstName: 'Karim',
+    lastName: 'Belkacem',
+    role: 'employee',
+    service: 'Autorisation de voirie',
+    position: 'Autorisation de voirie',
+    phone: '+213 555 010 107',
+    joinDate: '2023-02-15',
+    status: 'active',
+  },
   
 ];
 

@@ -149,18 +149,15 @@ export function LoginPage({ onLogin, isDark, toggleDarkMode }: LoginPageProps) {
               <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
                 <p>
                   <span className="font-medium">
-                    {t('login') === 'Login' ? 'Administrator:' : 'Administrateur :'}
+                    {t('login') === 'Login' ? 'Municipal Agent:' : 'Agent Municipal :'}
                   </span>{' '}
-                  admin@gmail.com / admin123
+                  Municipal_Agent@gmail.com / Municipal_Agent123
                 </p>
                 <p>
                   <span className="font-medium">
                     {t('login') === 'Login' ? 'Employee:' : 'Employé :'}
                   </span>{' '}
-                  sarah@gmail.com / 
-                  jamel@gmail.com /
-                  fatima@gmail.com / 
-                  maria@gmail.com / employee123
+                  name@gmail.com / employee123
                 </p>
               </div>
             </div>

@@ -16,21 +16,21 @@ export interface EmployeeNotification {
   citizenLastName?: string;
   actYear?: string;
   actNumber?: string;
-  employeeId: string;
+  position: string;
   read: boolean;
   createdAt: string;
   link?: string;
 }
 
-export function useNotifications(employeeId: string, service?: string) {
+export function useNotifications(position: string, service?: string) {
   const [notifications, setNotifications] = useState<EmployeeNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchNotifications = useCallback(async () => {
-    if (!employeeId) return;
+    if (!position) return;
     try {
       setLoading(true);
-      const url = `${API_BASE_URL}/notifications/employee/${employeeId}${service ? `?service=${encodeURIComponent(service)}` : ''}`;
+      const url = `${API_BASE_URL}/notifications/employee/${position}${service ? `?service=${encodeURIComponent(service)}` : ''}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -67,7 +67,7 @@ export function useNotifications(employeeId: string, service?: string) {
     } finally {
       setLoading(false);
     }
-  }, [employeeId, service]);
+  }, [position, service]);
 
   useEffect(() => {
     fetchNotifications();
@@ -88,7 +88,7 @@ export function useNotifications(employeeId: string, service?: string) {
 
   const markAllAsRead = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/notifications/employee/${employeeId}/read-all`, {
+      const res = await fetch(`${API_BASE_URL}/notifications/employee/${position}/read-all`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ service })

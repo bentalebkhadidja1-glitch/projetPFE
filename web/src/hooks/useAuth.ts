@@ -4,12 +4,12 @@ import type { User } from '@/types';
 const MOCK_USERS: User[] = [
   {
     id: '1',
-    email: 'admin@gmail.com',
-    password: 'admin123',
-    firstName: 'Admin',
-    lastName: 'User',
-    role: 'admin',
-    service: 'Administration',
+    email: 'Municipal_Agent@gmail.com',
+    password: 'Municipal_Agent123',
+    firstName: 'Mohamed',
+    lastName: 'Belahoili',
+    role: 'Municipal_Agent',
+    service: 'Municipal_Agent',
     position: 'System Administrator',
     phone: '+213 555 010 101',
     joinDate: '2020-01-01',
@@ -28,7 +28,7 @@ const MOCK_USERS: User[] = [
     joinDate: '2021-03-20',
     status: 'active',
   },
-   {
+  {
     id: '3',
     email: 'jamel@gmail.com',
     password: 'employee123',
@@ -49,7 +49,7 @@ const MOCK_USERS: User[] = [
     lastName: 'Hamdani',
     role: 'employee',
     service: 'Civil Status',
-    position: 'Carte de séjour',
+    position: 'Fiche de résidence',
     phone: '+213 555 010 104',
     joinDate: '2022-01-05',
     status: 'active',
@@ -67,6 +67,19 @@ const MOCK_USERS: User[] = [
     joinDate: '2022-07-20',
     status: 'active',
   },
+  {
+    id: '6',
+    email: 'karim@gmail.com',
+    password: 'employee123',
+    firstName: 'Karim',
+    lastName: 'Belkacem',
+    role: 'employee',
+    service: 'Autorisation de voirie',
+    position: 'Autorisation de voirie',
+    phone: '+213 555 010 107',
+    joinDate: '2023-02-15',
+    status: 'active',
+  },
 ];
 
 export function useAuth() {
@@ -80,7 +93,7 @@ export function useAuth() {
     const resolved =
       normalized === 'sarah@gmail.com'
         ? 'sarah@gmail.com'
-        : normalized === 'emma@gmail.com'
+        : normalized === 'fatima@gmail.com'
           ? 'fatima@gmail.com'
           : normalized;
     const found = MOCK_USERS.find(
