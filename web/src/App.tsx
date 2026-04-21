@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LoginPage } from '@/sections/LoginPage';
 import { MunicipalAgentDashboard } from '@/sections/AdminDashboard';
 import { EmployeeDashboard } from '@/sections/EmployeeDashboard';
@@ -8,8 +8,9 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { Toaster } from '@/components/ui/sonner';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { API_BASE_URL } from '@/lib/apiBase';
+import { useSocket } from '@/hooks/useSocket';
 
-export type Vue = 'connexion' | 'admin' | 'employe';
+export type Vue = 'connexion' | 'municipal_agent' | 'employe';
 
 interface User {
   id: string;
@@ -28,8 +29,29 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const { isDark, toggleDarkMode } = useDarkMode();
   
+  // Socket.IO connection
+  const { notifications: socketNotifications, sendNotification } = useSocket(
+    user?.id || '', 
+    user?.role || ''
+  );
+
+  // Log socket notifications
+  useEffect(() => {
+    if (socketNotifications.length > 0) {
+      console.log('New notification via Socket:', socketNotifications[0]);
+    }
+  }, [socketNotifications]);
+
+  useEffect(() => {
+    fetch("http://localhost:5000/")
+      .then(res => res.text())
+      .then(data => console.log("BACKEND RESPONSE:", data))
+      .catch(err => console.error("ERROR:", err));
+  }, []);
+  
   const { requests, loading, getTasksByEmployee } = useRealRequests(user?.id || '');
-  const { employees: adminEmployees, loading: adminLoading } = useAdminData();
+  const { employees: adminEmployees, loading: adminLoading } = useAdminData(vueActuelle === 'municipal_agent');
+  const notificationsState = useNotifications(user?.id || '', user?.service || '');
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -58,7 +80,7 @@ function App() {
       }
       
       // Try admin login
-      const adminResponse = await fetch(`${API_BASE_URL}/Municipal_Agent/login`, {
+      const adminResponse = await fetch(`${API_BASE_URL}/municipal_agent/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -77,7 +99,7 @@ function App() {
           phone: data.user.phone,
           joinDate: data.user.joinDate,
         });
-        setVueActuelle('admin');
+        setVueActuelle('municipal_agent');
         return true;
       }
       
@@ -94,11 +116,8 @@ function App() {
   };
 
   const updateUser = (updatedUser: User) => setUser(updatedUser);
-
-  const notificationsState = useNotifications(user?.id || '', user?.service || '');
-
-  // Loading state
-  const isLoading = (vueActuelle === 'employe' && loading) || (vueActuelle === 'admin' && adminLoading);
+  
+  const isLoading = (vueActuelle === 'employe' && loading) || (vueActuelle === 'municipal_agent' && adminLoading);
   
   if (isLoading) {
     return (
@@ -124,7 +143,8 @@ function App() {
           <Toaster />
         </>
       );
-    case 'admin':
+      
+    case 'municipal_agent':
       return (
         <>
           <MunicipalAgentDashboard
@@ -141,6 +161,7 @@ function App() {
           <Toaster />
         </>
       );
+      
     case 'employe':
       return (
         <>
@@ -156,6 +177,7 @@ function App() {
           <Toaster />
         </>
       );
+      
     default:
       return (
         <>

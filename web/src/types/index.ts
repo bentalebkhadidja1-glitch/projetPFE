@@ -13,6 +13,7 @@ export interface User {
   joinDate: string;
   avatar?: string;
   status: 'active' | 'inactive';
+  token?: string;
 }
 
 export interface Task {

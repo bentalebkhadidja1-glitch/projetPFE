@@ -20,12 +20,12 @@ interface TaskWithCitizen extends Task {
 const TACHES_INITIALES: TaskWithCitizen[] = [
   {
     id: '1',
-    title: 'Carte de séjour (ou permis de séjour)',
+    title: 'Fiche de résidence ',
     assignedTo: '3',
     assignedBy: '1',
     status: 'in-progress',
     createdAt: '2026-01-01',
-    requestType: 'Carte de séjour',
+    requestType: 'Fiche de résidence ',
     documentStatus: 'pending',
     citizen: {
       firstName: 'Ahmed',
@@ -79,6 +79,22 @@ const TACHES_INITIALES: TaskWithCitizen[] = [
       firstName: 'Karim',
       lastName: 'Tazi',
       email: 'karim.tazi@email.com',
+      nin: '113216549873200016'
+    }
+  },
+  {
+    id: '6',
+    title: 'autorisation de voirie',
+    assignedTo: '6',
+    assignedBy: '1',
+    status: 'in-progress',
+    createdAt: '2024-01-04',
+    requestType: 'autorisation de voirie',
+    documentStatus: 'pending',
+    citizen: {
+      firstName: 'Kamel',
+      lastName: 'Tayebi',
+      email: 'kamel_tayebi@email.com',
       nin: '113216549873200016'
     }
   },

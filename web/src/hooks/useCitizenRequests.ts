@@ -71,6 +71,18 @@ const REQUESTS_INITIALES: CitizenRequest[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: 'req-5',
+    citizenId: 'c5',
+    citizen: CITIZENS[4],
+    type: 'document',
+    subject: 'autorisation de voirie',
+    description: 'Demande d\'autorisation',
+    status: 'pending',
+    assignedPosition: 'autorisation de voirie',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+   },
 ];
 
 // Generate notifications from requests — LINKED by POSITION

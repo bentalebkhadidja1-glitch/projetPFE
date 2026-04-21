@@ -62,7 +62,7 @@ const INITIAL_EMPLOYEES: User[] = [
     firstName: 'Karim',
     lastName: 'Belkacem',
     role: 'employee',
-    service: 'Autorisation de voirie',
+    service: 'Technical Service',
     position: 'Autorisation de voirie',
     phone: '+213 555 010 107',
     joinDate: '2023-02-15',

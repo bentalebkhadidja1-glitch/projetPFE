@@ -151,7 +151,7 @@ export function LoginPage({ onLogin, isDark, toggleDarkMode }: LoginPageProps) {
                   <span className="font-medium">
                     {t('login') === 'Login' ? 'Municipal Agent:' : 'Agent Municipal :'}
                   </span>{' '}
-                  Municipal_Agent@gmail.com / Municipal_Agent123
+                  municipal_agent@gmail.com / municipalagent123
                 </p>
                 <p>
                   <span className="font-medium">

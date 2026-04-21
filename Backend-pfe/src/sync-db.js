@@ -1,11 +1,11 @@
 // src/sync-db.js
 import sequelize from './config/database.js';
-import './models/User.js';
-import './models/employee.js';
-import './models/Citizen.js';
-import './models/Demande.js';
-import './models/request.js';
-import './models/notifications.js';
+
+import { Citizen } from './models/Citizen.js';
+import { Employee } from './models/employee.js';      
+import Demande from './models/Demande.js';
+import { Request } from './models/request.js';        
+import { Notification } from './models/notifications.js';  
 
 async function syncDatabase() {
   try {

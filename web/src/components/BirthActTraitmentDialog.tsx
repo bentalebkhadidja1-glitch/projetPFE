@@ -179,8 +179,8 @@ function BirthCertificatePreview({
             &nbsp;عمره <span className="border-b border-dotted border-slate-400 inline-block w-12">......</span>
             &nbsp;مهنته <span className="border-b border-dotted border-slate-400 inline-block w-20">........</span></p>
           <p>و <span className="border-b border-dotted border-slate-400 inline-block w-24">............</span>
-            &nbsp;عمرها <span className="border-b border-dotted border-slate-400 inline-block w-12">......</span>
-            &nbsp;مهنتها <span className="border-b border-dotted border-slate-400 inline-block w-20">........</span></p>
+            &nbsp;عمرها <span className="border-b border-dotted border-slate-400 inline-block w-12">.././././.</span>
+            &nbsp;مهنتها <span className="border-b border-dotted border-slate-400 inline-block w-20">././././..</span></p>
           <p>الساكنين <span className="border-b border-dotted border-slate-400 inline-block w-20">........</span>
             &nbsp;بلدية <span className="font-bold">{commune || '............'}</span>
             &nbsp;ولاية <span className="font-bold">{wilaya || '............'}</span></p>

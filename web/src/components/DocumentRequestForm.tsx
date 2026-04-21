@@ -41,8 +41,8 @@ const documentTypes = [
   { value: 'birth', label: 'Acte de naissance', description: 'Extrait d\'acte de naissance' },
   { value: 'marriage', label: 'Acte de mariage',description: 'Certificat de mariage' },
   { value: 'residence', label: 'Fiche de Résidence', description: 'Attestation de résidence' },
-  { value: 'nationality', label: 'Certificat de nationalité',  description: 'Attestation de nationalité' },
-  { value: 'other', label: 'Autre document', description: 'Autre type de document' },
+  { value: 'residence', label: 'Certificat de résidence',  description: 'Certificat de résidence' },
+  { value: 'tichnical', label: 'Authorisation de voirie', description: 'Authorisation de voirie' },
 ];
 
 export function DocumentRequestForm({ citizenId, onSubmit }: DocumentRequestFormProps) {

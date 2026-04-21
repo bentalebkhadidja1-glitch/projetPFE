@@ -1,24 +1,21 @@
-// src/config/database.js
 import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
 
-dotenv.config();
 
 const sequelize = new Sequelize(
-  process.env.POSTGRES_DB,
-  process.env.POSTGRES_USER,
-  process.env.POSTGRES_PASSWORD,
+  'postgres',           // database name
+  'postgres.dciekpixcommdcxrzirl',  // username (with project ref)
+  'Benta-205@&',      // your database password
   {
-    host: process.env.POSTGRES_HOST,
+    host: 'aws-0-eu-west-1.pooler.supabase.com',
+    port: 5432,
     dialect: 'postgres',
-    port: process.env.POSTGRES_PORT,
-    logging: false,
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    }
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    },
+    logging: false
   }
 );
 

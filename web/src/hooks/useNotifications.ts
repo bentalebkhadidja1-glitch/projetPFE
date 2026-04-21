@@ -30,37 +30,27 @@ export function useNotifications(position: string, service?: string) {
     if (!position) return;
     try {
       setLoading(true);
-      const url = `${API_BASE_URL}/notifications/employee/${position}${service ? `?service=${encodeURIComponent(service)}` : ''}`;
+      const url = `${API_BASE_URL}/notifications/position/${position}${service ? `?service=${encodeURIComponent(service)}` : ''}`;
       const res = await fetch(url);
+      
       if (res.ok) {
         const data = await res.json();
-        // Map backend Notification to EmployeeNotification expected by components
-        const mapped = data.map((n: any) => {
-          const fn = n.citizenFirstName;
-          const ln = n.citizenLastName;
-          const nameFromParts = fn || ln ? [fn, ln].filter(Boolean).join(' ') : '';
-          return {
-            id: n._id,
-            title: n.title,
-            message: n.message,
-            type: n.type,
-            read: n.isRead,
-            createdAt: n.createdAt,
-            employeeId: n.employeeId != null ? String(n.employeeId) : '',
-            link: n.link || '#',
-            requestId: n.requestId ? String(n.requestId) : undefined,
-            citizenName: nameFromParts || n.citizenName,
-            citizenNin: n.citizenNin,
-            citizenEmail: n.citizenEmail,
-            wilaya: n.wilaya,
-            commune: n.commune,
-            citizenFirstName: n.citizenFirstName,
-            citizenLastName: n.citizenLastName,
-            actYear: n.actYear,
-            actNumber: n.actNumber,
-          };
-        });
+        
+        const mapped = data.map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          message: n.message,
+          type: n.service || 'general',
+          read: n.isRead,
+          createdAt: n.createdAt,
+          position: n.position,
+          link: '#'
+        }));
+        
         setNotifications(mapped);
+        console.log('Notifications fetched:', mapped);
+      } else {
+        console.error('Failed to fetch:', res.status);
       }
     } catch (err) {
       console.error('Failed to fetch notifications', err);
@@ -71,13 +61,15 @@ export function useNotifications(position: string, service?: string) {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+    const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
   const markNotificationAsRead = async (id: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/notifications/${id}/read`, { method: 'PUT' });
+      const res = await fetch(`${API_BASE_URL}/notifications/${id}/read`, { 
+        method: 'PUT' 
+      });
       if (res.ok) {
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
       }
@@ -88,7 +80,7 @@ export function useNotifications(position: string, service?: string) {
 
   const markAllAsRead = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/notifications/employee/${position}/read-all`, {
+      const res = await fetch(`${API_BASE_URL}/notifications/position/${position}/read-all`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ service })

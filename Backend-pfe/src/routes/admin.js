@@ -1,175 +1,175 @@
 import express from 'express';
-import { Request } from '../models/request.js';
-import { Employee } from '../models/employee.js';
-import { Op } from 'sequelize';
+import pool from '../db.js'; // pg Pool
 
 const router = express.Router();
 
-const ADMIN_CREDENTIALS = {
-  email: 'admin@gmail.com',
-  password: 'admin123',
-  id: '00000000-0000-0000-0000-000000000001'  
+const MUNICIPAL_AGENT_CREDENTIALS = {
+  email: 'municipal_agent@gmail.com',
+  password: 'municipalagent123',
+  id: '00000000-0000-0000-0000-000000000001'
 };
+
+// POST /admin/login
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    
-    console.log('\n=== TENTATIVE CONNEXION ADMIN ===');
-    console.log('Email:', email);
-    
-    if (email !== ADMIN_CREDENTIALS.email) {
-      console.log('Email admin incorrect');
+    const cleanEmail = email.trim();
+    const cleanPassword = password.trim();
+
+    if (cleanEmail !== MUNICIPAL_AGENT_CREDENTIALS.email) {
       return res.status(401).json({ message: 'Identifiants incorrects' });
     }
-    
-    if (password !== ADMIN_CREDENTIALS.password) {
-      console.log('Mot de passe admin incorrect');
+    if (cleanPassword !== MUNICIPAL_AGENT_CREDENTIALS.password) {
       return res.status(401).json({ message: 'Identifiants incorrects' });
     }
-    console.log('Admin connecte');
-    
+
+    console.log('Municipal_Agent connecté');
     res.json({
-      message: 'Connexion admin reussie',
+      message: 'Connexion Municipal_Agent réussie',
       user: {
-        id: ADMIN_CREDENTIALS.id,  // UUID format
-        email: ADMIN_CREDENTIALS.email,
-        firstName: 'Administrateur',
+        id: MUNICIPAL_AGENT_CREDENTIALS.id,
+        email: MUNICIPAL_AGENT_CREDENTIALS.email,
+        firstName: 'Municipal_Agent',
         lastName: '',
-        name: 'Administrateur',
-        role: 'admin',
-        service: 'Administration',
-        position: 'Administrateur Systeme',
+        name: 'Municipal_Agent',
+        role: 'municipal_agent',
+        service: 'Administration Système',
+        position: 'Administrateur Système',
         phone: '',
         joinDate: new Date().toISOString()
       }
     });
-    
   } catch (error) {
-    console.error('Erreur login admin:', error);
+    console.error('Erreur login Municipal_Agent:', error);
     res.status(500).json({ message: error.message });
   }
 });
+
+// GET /admin/employees — list all employees
 router.get('/employees', async (req, res) => {
   try {
-    const employees = await Employee.findAll({
-      attributes: { exclude: ['password'] },
-      order: [['createdAt', 'DESC']]
-    });
-    
-    console.log(`\nAdmin: ${employees.length} employes trouves`);
-    
-    res.json({
-      count: employees.length,
-      employees: employees
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-router.get('/employees/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const employee = await Employee.findByPk(id, {
-      attributes: { exclude: ['password'] }
-    });
-    
-    if (!employee) {
-      return res.status(404).json({ message: 'Employe non trouve' });
-    }
-    
-    res.json(employee);
+    const { rows } = await pool.query(
+      `SELECT id, email, first_name, last_name, role, service, position,
+              phone, join_date, status, created_at, updated_at
+       FROM employees
+       ORDER BY created_at DESC`
+    );
+    console.log(`Municipal_Agent: ${rows.length} employés trouvés`);
+    res.json({ count: rows.length, employees: rows });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
+// GET /admin/employees/:id
+router.get('/employees/:id', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, email, first_name, last_name, role, service, position,
+              phone, join_date, status, created_at, updated_at
+       FROM employees
+       WHERE id = $1`,
+      [req.params.id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Employé non trouvé' });
+    }
+    res.json(rows[0]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// GET /admin/all-requests
 router.get('/all-requests', async (req, res) => {
   try {
-    const requests = await Request.findAll({
-      order: [['createdAt', 'DESC']]
-    });
-    
-    console.log(`\nAdmin: ${requests.length} demandes trouvees`);
-    
-    res.json({
-      count: requests.length,
-      requests: requests
-    });
+    const { rows } = await pool.query(
+      `SELECT * FROM requests ORDER BY created_at DESC`
+    );
+    console.log(`Municipal_Agent: ${rows.length} demandes trouvées`);
+    res.json({ count: rows.length, requests: rows });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
+// GET /admin/requests/:id
 router.get('/requests/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const request = await Request.findByPk(id);
-    
-    if (!request) {
-      return res.status(404).json({ message: 'Demande non trouvee' });
+    const { rows } = await pool.query(
+      `SELECT * FROM requests WHERE id = $1`,
+      [req.params.id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Demande non trouvée' });
     }
-    
-    res.json(request);
+    res.json(rows[0]);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
+// GET /admin/stats
 router.get('/stats', async (req, res) => {
   try {
-    const total = await Request.count();
-    const pending = await Request.count({ where: { status: 'pending' } });
-    const completed = await Request.count({ where: { status: 'completed' } });
-    const rejected = await Request.count({ where: { status: 'rejected' } });
-    
-    console.log('\nStatistiques admin:');
-    console.log(`  Total: ${total} | En attente: ${pending} | Termine: ${completed} | Rejete: ${rejected}`);
-    
+    const { rows } = await pool.query(
+      `SELECT
+         COUNT(*)                                         AS total,
+         COUNT(*) FILTER (WHERE status = 'pending')      AS pending,
+         COUNT(*) FILTER (WHERE status = 'in_progress')  AS in_progress,
+         COUNT(*) FILTER (WHERE status = 'completed')    AS completed,
+         COUNT(*) FILTER (WHERE status = 'rejected')     AS rejected
+       FROM requests`
+    );
+    const stats = rows[0];
+    console.log('Statistiques Municipal_Agent:', stats);
     res.json({
-      total,
-      pending,
-      completed,
-      rejected
+      total:       parseInt(stats.total),
+      pending:     parseInt(stats.pending),
+      in_progress: parseInt(stats.in_progress),
+      completed:   parseInt(stats.completed),
+      rejected:    parseInt(stats.rejected)
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
+// PUT /admin/requests/:id/status
 router.put('/requests/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, commentaire } = req.body;
-    
-    const request = await Request.findByPk(id);
-    
-    if (!request) {
-      return res.status(404).json({ message: 'Demande non trouvee' });
+    const { status, comment } = req.body;
+
+    const { rows } = await pool.query(
+      `UPDATE requests
+       SET status = $1,
+           comment = COALESCE($2, comment),
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING *`,
+      [status, comment || null, id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Demande non trouvée' });
     }
-    
-    request.status = status;
-    if (commentaire) request.commentaire = commentaire;
-    request.dateTraitement = new Date();
-    
-    await request.save();
-    
-    res.json({
-      message: 'Statut mis a jour avec succes',
-      request: request
-    });
+    res.json({ message: 'Statut mis à jour avec succès', request: rows[0] });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
+// DELETE /admin/requests/:id
 router.delete('/requests/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const deleted = await Request.destroy({
-      where: { id: id }
-    });
-    
-    if (deleted === 0) {
-      return res.status(404).json({ message: 'Demande non trouvee' });
+    const { rowCount } = await pool.query(
+      `DELETE FROM requests WHERE id = $1`,
+      [req.params.id]
+    );
+    if (rowCount === 0) {
+      return res.status(404).json({ message: 'Demande non trouvée' });
     }
-    
-    res.json({ message: 'Demande supprimee avec succes' });
+    res.json({ message: 'Demande supprimée avec succès' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

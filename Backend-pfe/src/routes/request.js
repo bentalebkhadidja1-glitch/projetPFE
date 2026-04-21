@@ -1,378 +1,341 @@
 import express from 'express';
-import { Request } from '../models/request.js';
+import pool from '../db.js'; // pg Pool
 import { emailService, initializeEmail } from './emailServices.js';
 import { PDFService } from './pdfservice.js';
-import { Employee } from '../models/employee.js';
+import bcrypt from 'bcrypt';
 
 const router = express.Router();
-let testAccountSetup = false;
+let emailInitialized = false;
 
-// Employees mapped by POSITION with UUIDs
-const employees = {
-  'fiche_residence': { 
-    id: '11111111-1111-1111-1111-111111111111',  // UUID format
-    name: 'Sarah', 
-    email: 'sarah@gmail.com', 
-    service: 'Fiche de residence', 
-    position: 'fiche_residence' 
-  },
-  'certificat_residence': { 
-    id: '22222222-2222-2222-2222-222222222222',  // UUID format
-    name: 'Jamel', 
-    email: 'jamel@gmail.com', 
-    service: 'Certificat de residence', 
-    position: 'certificat_residence' 
-  },
-  'acte_naissance': { 
-    id: '33333333-3333-3333-3333-333333333333',  // UUID format
-    name: 'Fatima', 
-    email: 'fatima@gmail.com', 
-    service: 'Acte de naissance', 
-    position: 'acte_naissance' 
-  },
-  'certificat_mariage': { 
-    id: '44444444-4444-4444-4444-444444444444',  // UUID format
-    name: 'Maria', 
-    email: 'maria@gmail.com', 
-    service: 'Certificat de mariage', 
-    position: 'certificat_mariage' 
-  }
-};
-
-const EMPLOYEE_PASSWORD = 'employee123';
-
-console.log('\n=== EMPLOYES ENREGISTRES ===');
-Object.values(employees).forEach(emp => {
-  console.log(`${emp.name}: ${emp.email} / ${EMPLOYEE_PASSWORD} (Position: ${emp.position} - Service: ${emp.service} - ID: ${emp.id})`);
-});
-console.log('============================\n');
-
-// Submit request
+// ── POST /requests/submit ─────────────────────────────────────────────────────
 router.post('/submit', async (req, res) => {
   try {
-    if (!testAccountSetup) {
+    if (!emailInitialized) {
       await initializeEmail();
-      testAccountSetup = true;
+      emailInitialized = true;
     }
 
     const { citizenData, subject, description, serviceType } = req.body;
-    console.log('\n=== NOUVELLE DEMANDE ===');
-    console.log('Citoyen:', citizenData.firstName, citizenData.lastName);
-    
-    let assignedEmployee = employees['certificat_residence'];
-    const serviceLower = (serviceType || '').toLowerCase();
-    
-    if (serviceLower.includes('fiche') || serviceLower.includes('residence')) {
-      assignedEmployee = employees['fiche_residence'];
-    } else if (serviceLower.includes('certificat') || serviceLower.includes('residence')) {
-      assignedEmployee = employees['certificat_residence'];
-    } else if (serviceLower.includes('Acte') || serviceLower.includes('naissance')) {
-      assignedEmployee = employees['acte_naissance'];
-    } else if (serviceLower.includes('certificat') || serviceLower.includes('mariage')) {
-      assignedEmployee = employees['certificat_mariage'];
-    }if (serviceLower.includes('Autorisation ') || serviceLower.includes('forage')) {
-      assignedEmployee = employees['Autorisation de forage'];
-    }
-    
-    console.log(`Assigné à: ${assignedEmployee.name} (Position: ${assignedEmployee.position} - Service: ${assignedEmployee.service})`);
+    // citizenData: { firstName, lastName, email, nin, phone, address }
 
-    const newRequest = await Request.create({
-      citizen: citizenData,
-      subject,
-      description,
-      serviceType: serviceType || 'Non spécifié',
-      assignedTo: assignedEmployee.position,  // Using POSITION as string
-      assignedToId: assignedEmployee.id,      // Using UUID
-      assignedToName: assignedEmployee.name,
-      assignedToEmail: assignedEmployee.email,
-      status: 'pending',
-    });
-    
-    console.log('Demande enregistree:', newRequest.id);
-    
+    // Find the employee whose `service` matches the requested serviceType
+    const { rows: empRows } = await pool.query(
+      `SELECT id, first_name, last_name, email, service, position
+       FROM employees
+       WHERE status = 'active'
+         AND LOWER(service) LIKE LOWER($1)
+       LIMIT 1`,
+      [`%${serviceType}%`]
+    );
+
+    if (empRows.length === 0) {
+      return res.status(400).json({ message: `Aucun employé disponible pour le service: ${serviceType}` });
+    }
+
+    const emp = empRows[0];
+    const empFullName = `${emp.first_name} ${emp.last_name}`;
+
+    const { rows } = await pool.query(
+      `INSERT INTO requests
+         (citizen_first_name, citizen_last_name, citizen_email, citizen_nin,
+          citizen_phone, citizen_address,
+          subject, description,
+          assigned_to, assigned_employee_name,
+          status, document_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', 'pending')
+       RETURNING *`,
+      [
+        citizenData.firstName,
+        citizenData.lastName,
+        citizenData.email,
+        citizenData.nin,
+        citizenData.phone    ?? null,
+        citizenData.address  ?? null,
+        subject,
+        description,
+        emp.id,
+        empFullName
+      ]
+    );
+
+    const newRequest = rows[0];
+    console.log('Demande enregistrée:', newRequest.id);
+
     try {
       await emailService.sendEmployeeNotification(
-        assignedEmployee.email,
-        assignedEmployee.name,
+        emp.email, empFullName,
         `${citizenData.firstName} ${citizenData.lastName}`,
-        subject,
-        serviceType
+        subject, serviceType
       );
     } catch (emailError) {
       console.error('Email failed:', emailError.message);
     }
-    
+
     res.status(201).json({
-      message: 'Demande soumise avec succes',
+      message: 'Demande soumise avec succès',
       requestId: newRequest.id,
       assignedTo: {
-        id: assignedEmployee.id,
-        name: assignedEmployee.name,
-        position: assignedEmployee.position,
-        service: assignedEmployee.service
+        id:       emp.id,
+        name:     empFullName,
+        position: emp.position,
+        service:  emp.service
       }
     });
-    
   } catch (error) {
-    console.error('Erreur:', error);
+    console.error('Erreur submit:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
-// Employee login (using POSITION or UUID)
+// ── POST /requests/login (employee login) ─────────────────────────────────────
 router.post('/login', async (req, res) => {
   try {
-    const { email, password, position, employeeId } = req.body;
-    
-    if (password !== EMPLOYEE_PASSWORD) {
-      return res.status(401).json({ message: 'Mot de passe incorrect' });
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email et mot de passe requis' });
     }
-    
-    let employee = null;
-    if (position) {
-      employee = Object.values(employees).find(emp => emp.position === position);
-    } else if (email) {
-      employee = Object.values(employees).find(emp => emp.email === email);
-    } else if (employeeId) {
-      employee = Object.values(employees).find(emp => emp.id === employeeId);
+
+    const { rows } = await pool.query(
+      `SELECT id, email, password_hash, first_name, last_name,
+              role, service, position, phone, status
+       FROM employees
+       WHERE email = $1`,
+      [email.trim()]
+    );
+
+    if (rows.length === 0) {
+      return res.status(401).json({ message: 'Identifiants incorrects' });
     }
-    
-    if (!employee) {
-      return res.status(404).json({ message: 'Employe non trouve' });
+
+    const emp = rows[0];
+    if (emp.status !== 'active') {
+      return res.status(403).json({ message: 'Compte inactif' });
     }
-    
-    console.log(`\nConnexion: ${employee.name} (Position: ${employee.position} - Service: ${employee.service} - ID: ${employee.id})`);
-    
+
+    const match = await bcrypt.compare(password, emp.password_hash);
+    if (!match) {
+      return res.status(401).json({ message: 'Identifiants incorrects' });
+    }
+
+    console.log(`Connexion employé: ${emp.first_name} ${emp.last_name} (${emp.position})`);
+
     res.json({
-      message: 'Connexion reussie',
+      message: 'Connexion réussie',
       employee: {
-        id: employee.id,
-        name: employee.name,
-        email: employee.email,
-        service: employee.service,
-        position: employee.position
+        id:        emp.id,
+        email:     emp.email,
+        firstName: emp.first_name,
+        lastName:  emp.last_name,
+        role:      emp.role,
+        service:   emp.service,
+        position:  emp.position
       }
     });
-    
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Get my requests (by POSITION)
-router.get('/my-requests/:position', async (req, res) => {
+// ── GET /requests/my-requests/:employeeId ─────────────────────────────────────
+router.get('/my-requests/:employeeId', async (req, res) => {
   try {
-    const requests = await Request.findAll({
-      where: { assignedTo: req.params.position },
-      order: [['createdAt', 'DESC']]
-    });
-    
-    res.json({
-      count: requests.length,
-      requests: requests
-    });
+    const { rows } = await pool.query(
+      `SELECT * FROM requests
+       WHERE assigned_to = $1
+       ORDER BY created_at DESC`,
+      [req.params.employeeId]
+    );
+    res.json({ count: rows.length, requests: rows });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Get my requests by employee UUID
-router.get('/my-requests/by-employee/:employeeId', async (req, res) => {
+// ── GET /requests/all-requests ────────────────────────────────────────────────
+router.get('/all-requests', async (req, res) => {
   try {
-    const employee = Object.values(employees).find(emp => emp.id === req.params.employeeId);
-    
-    if (!employee) {
-      return res.status(404).json({ message: 'Employe non trouve' });
-    }
-    
-    const requests = await Request.findAll({
-      where: { assignedTo: employee.position },
-      order: [['createdAt', 'DESC']]
-    });
-    
-    res.json({
-      count: requests.length,
-      employee: {
-        id: employee.id,
-        name: employee.name,
-        position: employee.position
-      },
-      requests: requests
-    });
+    const { rows } = await pool.query(
+      `SELECT * FROM requests ORDER BY created_at DESC`
+    );
+    res.json({ count: rows.length, requests: rows });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Get single request (by UUID)
-router.get('/request/:requestId', async (req, res) => {
-  try {
-    const request = await Request.findByPk(req.params.requestId);
-    if (!request) {
-      return res.status(404).json({ message: 'Demande non trouvee' });
-    }
-    res.json(request);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Get requests by status
+// ── GET /requests/status/:status ──────────────────────────────────────────────
 router.get('/status/:status', async (req, res) => {
   try {
-    const requests = await Request.findAll({
-      where: { status: req.params.status },
-      order: [['createdAt', 'DESC']]
-    });
-    
-    res.json({
-      count: requests.length,
-      requests: requests
-    });
+    const { rows } = await pool.query(
+      `SELECT * FROM requests WHERE status = $1 ORDER BY created_at DESC`,
+      [req.params.status]
+    );
+    res.json({ count: rows.length, requests: rows });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Validate with PDF (using POSITION)
-router.put('/validate-with-pdf/:requestId', async (req, res) => {
+// ── GET /requests/:requestId ──────────────────────────────────────────────────
+router.get('/:requestId', async (req, res) => {
   try {
-    const { status, documentStatus, comment, position } = req.body;
-    
-    const request = await Request.findByPk(req.params.requestId);
-    
-    if (!request) {
-      return res.status(404).json({ message: 'Demande non trouvee' });
+    const { rows } = await pool.query(
+      `SELECT * FROM requests WHERE id = $1`,
+      [req.params.requestId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Demande non trouvée' });
     }
-    
-    const employee = employees[position];
-    
-    request.status = status;
-    if (documentStatus) request.documentStatus = documentStatus;
-    if (comment) request.comment = comment;
-    request.validatedBy = position;
-    request.validatedById = employee?.id || null;
-    request.validationDate = new Date();
-    
-    await request.save();
-    
-    console.log('\n=== VALIDATION ===');
-    console.log('Demande:', request.id);
-    console.log('Statut:', status);
-    console.log('Valide par position:', position);
-    console.log('Valide par ID:', employee?.id);
-    console.log('Service:', employee?.service);
-    
+    res.json(rows[0]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ── PUT /requests/:requestId/validate-with-pdf ────────────────────────────────
+router.put('/:requestId/validate-with-pdf', async (req, res) => {
+  try {
+    const { status, document_status, comment, employee_id } = req.body;
+
+    // Fetch request
+    const { rows: reqRows } = await pool.query(
+      `SELECT * FROM requests WHERE id = $1`,
+      [req.params.requestId]
+    );
+    if (reqRows.length === 0) {
+      return res.status(404).json({ message: 'Demande non trouvée' });
+    }
+    const request = reqRows[0];
+
+    // Fetch employee
+    let emp = null;
+    if (employee_id) {
+      const { rows: empRows } = await pool.query(
+        `SELECT id, first_name, last_name, email, service, position
+         FROM employees WHERE id = $1`,
+        [employee_id]
+      );
+      emp = empRows[0] ?? null;
+    }
+
+    // Update request
+    const { rows: updated } = await pool.query(
+      `UPDATE requests
+       SET status          = $1,
+           document_status = COALESCE($2, document_status),
+           comment         = COALESCE($3, comment),
+           assigned_by     = COALESCE($4, assigned_by),
+           updated_at      = NOW()
+       WHERE id = $5
+       RETURNING *`,
+      [
+        status,
+        document_status ?? null,
+        comment         ?? null,
+        employee_id     ?? null,
+        req.params.requestId
+      ]
+    );
+    const updatedRequest = updated[0];
+
+    console.log('Validation demande:', updatedRequest.id, '| Statut:', status);
+
+    // Generate PDF (pass the flat row directly)
     let pdfBuffer = null;
     try {
-      pdfBuffer = await PDFService.generateCitizenPDF(request.citizen, request);
-      console.log('PDF genere:', pdfBuffer.length, 'bytes');
+      pdfBuffer = await PDFService.generateCitizenPDF(updatedRequest);
+      console.log('PDF généré:', pdfBuffer.length, 'bytes');
     } catch (pdfError) {
       console.error('PDF Error:', pdfError.message);
     }
-    
+
+    // Send email
     let emailSent = false;
-    if ((status === 'completed' || status === 'rejected') && pdfBuffer && request.citizen?.email) {
+    if ((status === 'completed' || status === 'rejected') && pdfBuffer && updatedRequest.citizen_email) {
       try {
         await emailService.sendValidationEmailWithPDF(
-          request.citizen.email,
-          request.citizen.firstName,
-          request.subject,
+          updatedRequest.citizen_email,
+          updatedRequest.citizen_first_name,
+          updatedRequest.subject,
           status,
-          employee?.name || 'Service municipal',
+          emp ? `${emp.first_name} ${emp.last_name}` : 'Service municipal',
           comment,
           pdfBuffer
         );
         emailSent = true;
-        console.log('Email envoye');
+        console.log('Email envoyé');
       } catch (emailError) {
         console.error('Email Error:', emailError.message);
       }
     }
-    
+
     res.json({
-      message: 'Demande traitee',
-      request,
+      message: 'Demande traitée',
+      request: updatedRequest,
       pdfGenerated: !!pdfBuffer,
       emailSent
     });
-    
   } catch (error) {
-    console.error('Validation error:', error);
+    console.error('Erreur validation:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
-// Download PDF (by UUID)
-router.get('/download-pdf/:requestId', async (req, res) => {
+// ── GET /requests/:requestId/download-pdf ─────────────────────────────────────
+router.get('/:requestId/download-pdf', async (req, res) => {
   try {
-    const request = await Request.findByPk(req.params.requestId);
-    if (!request) {
-      return res.status(404).json({ message: 'Demande non trouvee' });
+    const { rows } = await pool.query(
+      `SELECT * FROM requests WHERE id = $1`,
+      [req.params.requestId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Demande non trouvée' });
     }
-    
-    const pdfBuffer = await PDFService.generateCitizenPDF(request.citizen, request);
-    
+
+    const pdfBuffer = await PDFService.generateCitizenPDF(rows[0]);
+
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=demande-${request.id}.pdf`);
+    res.setHeader('Content-Disposition', `attachment; filename=demande-${rows[0].id}.pdf`);
     res.send(pdfBuffer);
-    
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Get all requests (for admin)
-router.get('/all-requests', async (req, res) => {
-  try {
-    const requests = await Request.findAll({
-      order: [['createdAt', 'DESC']]
-    });
-    
-    res.json({
-      count: requests.length,
-      requests: requests
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Update request status by position
-router.put('/request/:requestId/status', async (req, res) => {
+// ── PUT /requests/:requestId/status ───────────────────────────────────────────
+router.put('/:requestId/status', async (req, res) => {
   try {
     const { status, comment } = req.body;
-    const request = await Request.findByPk(req.params.requestId);
-    
-    if (!request) {
-      return res.status(404).json({ message: 'Demande non trouvee' });
+    const { rows } = await pool.query(
+      `UPDATE requests
+       SET status     = $1,
+           comment    = COALESCE($2, comment),
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING *`,
+      [status, comment ?? null, req.params.requestId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Demande non trouvée' });
     }
-    
-    request.status = status;
-    if (comment) request.comment = comment;
-    await request.save();
-    
-    res.json({
-      message: 'Statut mis a jour',
-      request
-    });
+    res.json({ message: 'Statut mis à jour', request: rows[0] });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
 
-// Delete request by UUID
-router.delete('/request/:requestId', async (req, res) => {
+// ── DELETE /requests/:requestId ───────────────────────────────────────────────
+router.delete('/:requestId', async (req, res) => {
   try {
-    const deleted = await Request.destroy({
-      where: { id: req.params.requestId }
-    });
-    
-    if (deleted === 0) {
-      return res.status(404).json({ message: 'Demande non trouvee' });
+    const { rowCount } = await pool.query(
+      `DELETE FROM requests WHERE id = $1`,
+      [req.params.requestId]
+    );
+    if (rowCount === 0) {
+      return res.status(404).json({ message: 'Demande non trouvée' });
     }
-    
-    res.json({ message: 'Demande supprimee avec succes' });
+    res.json({ message: 'Demande supprimée avec succès' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

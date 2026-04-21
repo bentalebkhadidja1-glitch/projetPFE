@@ -83,7 +83,7 @@ const translations = {
     errorValidation: 'Erreur lors de la validation',
     pdfDownloaded: 'PDF téléchargé avec succès',
 
-    // Admin
+    // Municipal Agent
     employees: 'Employés',
     recentEmployees: 'Employés récents',
     recentlyAdded: 'Membres récemment ajoutés',
@@ -172,7 +172,7 @@ const translations = {
     errorValidation: 'Error during validation',
     pdfDownloaded: 'PDF downloaded successfully',
 
-    // Admin
+    // Municipal Agent
     employees: 'Employees',
     recentEmployees: 'Recent Employees',
     recentlyAdded: 'Recently added members',

@@ -1,55 +1,72 @@
-import User from '../models/User.js';
+import bcrypt from 'bcrypt';
+import pool from '../db.js'; // pg Pool
 
-export const register = async (req, res, next) => {
+// ── POST /auth/register ────────────────────────────────────────────────────────
+export const register = async (req, res) => {
   try {
     const { nom, prenom, nin, email, telephone, adresse, codePostal, password } = req.body;
 
     console.log('Inscription reçue:', email);
 
-    const existingEmail = await User.findOne({ email });
-    if (existingEmail) {
+    // Check duplicate email
+    const { rows: emailCheck } = await pool.query(
+      `SELECT id FROM users WHERE email = $1`,
+      [email]
+    );
+    if (emailCheck.length > 0) {
       return res.status(400).json({ success: false, message: 'Email déjà utilisé', field: 'email' });
     }
 
-    const existingNIN = await User.findOne({ nin });
-    if (existingNIN) {
+    // Check duplicate NIN
+    const { rows: ninCheck } = await pool.query(
+      `SELECT id FROM users WHERE nin = $1`,
+      [nin]
+    );
+    if (ninCheck.length > 0) {
       return res.status(400).json({ success: false, message: 'NIN déjà utilisé', field: 'nin' });
     }
 
-    const user = new User({ nom, prenom, nin, email, telephone, adresse, codePostal, password });
+    // Hash password
+    const password_hash = await bcrypt.hash(password, 10);
 
-    await user.crypterPassword();
-    await user.save();
+    const { rows } = await pool.query(
+      `INSERT INTO users
+         (nom, prenom, nin, email, telephone, adresse, code_postal, password_hash, role)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'citoyen')
+       RETURNING id, nom, prenom, nin, email, telephone, adresse, code_postal, role, created_at`,
+      [nom, prenom, nin, email, telephone, adresse, codePostal, password_hash]
+    );
 
+    const user = rows[0];
     console.log('Compte créé:', email);
 
     res.status(201).json({
       success: true,
       message: 'Compte créé avec succès',
       user: {
-        id: user._id,
-        nom: user.nom,
-        prenom: user.prenom,
-        email: user.email,
-        telephone: user.telephone,
-        adresse: user.adresse,
-        nin: user.nin,
-        role: user.role
+        id:         user.id,
+        nom:        user.nom,
+        prenom:     user.prenom,
+        email:      user.email,
+        telephone:  user.telephone,
+        adresse:    user.adresse,
+        codePostal: user.code_postal,
+        nin:        user.nin,
+        role:       user.role
       }
     });
 
   } catch (error) {
     console.error('Erreur inscription:', error);
 
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({ success: false, message: 'Erreur de validation', errors: messages });
-    }
-
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyValue)[0];
-      if (field === 'email') return res.status(400).json({ success: false, message: 'Email déjà utilisé', field: 'email' });
-      if (field === 'nin') return res.status(400).json({ success: false, message: 'NIN déjà utilisé', field: 'nin' });
+    // PostgreSQL unique violation code
+    if (error.code === '23505') {
+      if (error.constraint?.includes('email')) {
+        return res.status(400).json({ success: false, message: 'Email déjà utilisé', field: 'email' });
+      }
+      if (error.constraint?.includes('nin')) {
+        return res.status(400).json({ success: false, message: 'NIN déjà utilisé', field: 'nin' });
+      }
       return res.status(400).json({ success: false, message: 'Donnée déjà utilisée' });
     }
 
@@ -57,20 +74,28 @@ export const register = async (req, res, next) => {
   }
 };
 
+// ── POST /auth/login ───────────────────────────────────────────────────────────
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     console.log('Tentative connexion:', email);
 
-    const user = await User.findOne({ email }).select('+password');
+    const { rows } = await pool.query(
+      `SELECT id, nom, prenom, nin, email, telephone, adresse, code_postal,
+              password_hash, role
+       FROM users
+       WHERE email = $1`,
+      [email]
+    );
 
-    if (!user) {
+    if (rows.length === 0) {
       return res.status(404).json({ success: false, status: 404, message: 'Email non trouvé' });
     }
 
-    const isMatch = await user.comparePassword(password);
+    const user = rows[0];
 
+    const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(401).json({ success: false, status: 401, message: 'Mot de passe incorrect' });
     }
@@ -81,15 +106,15 @@ export const login = async (req, res) => {
       success: true,
       message: 'Connexion réussie',
       user: {
-        id: user._id,
-        nom: user.nom,
-        prenom: user.prenom,
-        email: user.email,
-        telephone: user.telephone,
-        adresse: user.adresse,
-        codePostal: user.codePostal,
-        nin: user.nin,
-        role: user.role
+        id:         user.id,
+        nom:        user.nom,
+        prenom:     user.prenom,
+        email:      user.email,
+        telephone:  user.telephone,
+        adresse:    user.adresse,
+        codePostal: user.code_postal,
+        nin:        user.nin,
+        role:       user.role
       }
     });
 
@@ -99,10 +124,45 @@ export const login = async (req, res) => {
   }
 };
 
+// ── GET /auth/me ───────────────────────────────────────────────────────────────
+// Expects the user's id to be set on req.user by an auth middleware (e.g. JWT)
 export const getMe = async (req, res) => {
   try {
-    res.json({ message: 'Route protégée - à implémenter' });
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, message: 'Non authentifié' });
+    }
+
+    const { rows } = await pool.query(
+      `SELECT id, nom, prenom, nin, email, telephone, adresse, code_postal, role, created_at
+       FROM users
+       WHERE id = $1`,
+      [req.user.id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+
+    const user = rows[0];
+
+    res.json({
+      success: true,
+      user: {
+        id:         user.id,
+        nom:        user.nom,
+        prenom:     user.prenom,
+        email:      user.email,
+        telephone:  user.telephone,
+        adresse:    user.adresse,
+        codePostal: user.code_postal,
+        nin:        user.nin,
+        role:       user.role,
+        createdAt:  user.created_at
+      }
+    });
+
   } catch (error) {
-    res.status(500).json({ message: 'Erreur serveur' });
+    console.error('Erreur getMe:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 };

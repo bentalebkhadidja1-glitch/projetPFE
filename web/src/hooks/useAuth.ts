@@ -4,8 +4,8 @@ import type { User } from '@/types';
 const MOCK_USERS: User[] = [
   {
     id: '1',
-    email: 'Municipal_Agent@gmail.com',
-    password: 'Municipal_Agent123',
+    email: 'municipalagent@gmail.com',
+    password: 'municipalagent123',
     firstName: 'Mohamed',
     lastName: 'Belahoili',
     role: 'Municipal_Agent',
